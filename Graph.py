@@ -9,14 +9,14 @@ class ParseGraph:
     Version=""
     callMethodNameReferTo={}
     g=nx.DiGraph()
-    def __init__(self,method):
-        self.node_num=method["n_num"]
+    def __init__(self,method):#json格式
+        self.node_num=method["num"]
         self.succs=method["succs"]
-        self.attribute=method["Attribute"]
+        self.attribute=method["attribute"]
         self.callMethodNameReferTo=method["callMethodNameReferTo"]
         # TODO 这个直接加上MethodName字段的名字
-        self.methodName=method["MethodName"]
-        self.Version=method["Version"]
+        self.methodName=method["methodName"]
+        self.Version=method["version"]
     def Parse1(self):
         """
         #  处理单个函数的节点关系，使用整数来命名结点名字
@@ -43,14 +43,12 @@ class ParseGraph:
 
         # TODO 添加函数调用节点，用文件名节点代替表示
         for callnode in self.callMethodNameReferTo.keys():
-            callednamedic=self.callMethodNameReferTo[callnode]
-            calledfilename=list(callednamedic.keys())[0]#被调用函数所在的文件名
-            calledmethodname=callednamedic[calledfilename]#被调用函数的名字
+            calledmethodname=self.callMethodNameReferTo[callnode]#被调用函数的名字
             recallnode=str(callnode)+"_"+self.methodName
             g.add_edge(recallnode,calledmethodname,connection="call")
         self.g=g
         # 画图测试
-        print("画图测试")
+        #print("画图测试")
         # =============
         return g
     def Parse(self):
@@ -89,7 +87,6 @@ class ParseGraph:
             g.add_edge(recallnode, calledmethodname, {"connection": "call"})
         self.g = g
         #画图测试
-
         return g
 
 if __name__ == '__main__':

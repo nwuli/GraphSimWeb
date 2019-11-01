@@ -20,36 +20,46 @@ class ParseFile():
            LineList=file.readlines()
            str1=LineList[0]
            #头文件行
-           headFile=json.loads(LineList[0])
+           headFile={}
+           try:
+               headFile=json.loads(LineList[0])
+           except Exception:
+               print("{url}：输入数据不符合json格式：",format(url=self.path))
+               exit()
            #下面的所有函数行
            methodLine=LineList[1:]
            self.fileinfo(headFile=headFile)
            self.methodGraph(methodLine=methodLine)
-
-
     def fileinfo(self,headFile):
         self.fileName=headFile["fileName"]
-        self.Version=headFile["Version"]
-        self.methodList=headFile["callMethodName"]
+        self.Version=headFile["version"]
+        self.methodList=headFile["hasMethodName"]
     def methodGraph(self,methodLine):
         flag=True
         tempList=[]
         for method in methodLine:
-            methoddic=json.loads(method)
+            methoddic={}
+            try:
+                methoddic = json.loads(method)
+            except Exception:
+                print("{url}：输入数据不符合json格式：", format(url=self.path))
+                exit()
             singleGraph=[]
             #得到函数申明的函数名
-            methodname=methoddic["MethodName"]
+            try:
+                methodname = methoddic["methodName"]
+            except Exception:
+                print("the url is {url}:".format(url=self.path))
+
+
             #得到函数的callMethodNameRederTo节点
             callMethodNameReferTo=methoddic["callMethodNameReferTo"]
             g=ParseGraph(methoddic)
             # 添加节点间关系
             graph=g.Parse1()
-
             #=============================增加节点的属性(后面会修改)========================
             #graph=self.addAttritude(methodname,graph)
             #============================================================================
-
-
             singleGraph=[methodname,callMethodNameReferTo,graph]
             tempList.append(singleGraph)
         self.MethodGraph=tempList
@@ -61,11 +71,10 @@ class ParseFile():
             print("methodName:{name}\n SimRank:\n{sim}".format(name=methodname,sim=sim))
     def addAttritude(self,methodname,graph):
         #此处有bug，属性设置有问题
-        attriDic={"filename":self.fileName,"Version":self.Version,"methodname":methodname}
+        attriDic={"filename":self.fileName,"version":self.Version,"methodname":methodname}
         for node in graph.nodes():
             graph.add_node(node,attriDic)
         return graph
-
     def connectFile(self):
         #将整个文件的节点连接起来
         #filel_node,filel_node_attri=self.fileName+"_"+self.Version,{"filename":self.fileName,"Version":self.Version}
@@ -92,7 +101,6 @@ if __name__ == '__main__':
     file=ParseFile(path)
     #得到整个文件所有函数的节点间关系
     file_method_graph=file.connectFile()
-
     file.showSimRank()
     print("Done!")
 

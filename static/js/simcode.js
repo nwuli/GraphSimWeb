@@ -32,8 +32,6 @@ $(function () {
             layout: {name: 'cose', fit: true},  //画布自适应大小
             elements: result.elements//get请求的数据为result，注意前台页面传过来的数据格式
         });
-
-
         /* cy.nodes().forEach(function(ele) {
             ele.qtip({
                 content: {

@@ -7,18 +7,22 @@ class DataToNeo4j(object):
 
     def __init__(self, node_label):
         '''建立连接'''
-        link = Graph("http://localhost:7474", user="neo4j", password="1814")
+        link = Graph("bolt://localhost:11005", auth=("neo4j", "1814"))
         self.graph = link
         self.node_label = node_label # List
         self.index = 0
         # self.graph.delete_all()
 
 
-    def create_node(self, node_list):
+    def create_node(self, node_list,nodeType):
         '''建立节点'''
         try:
             for attribute in node_list:
-                name_node = Node(*self.node_label, id=self.index, **attribute)
+                # 开始是用字典保存的
+                # name_node = Node(*self.node_label, id=self.index, **attribute)
+
+                # 目前attribute仅仅是一个字符串
+                name_node = Node(*self.node_label, id=self.index, **{"attribute":attribute,"nodeType":nodeType})
                 self.graph.create(name_node)
                 self.index += 1
         except AttributeError as e:
@@ -33,7 +37,7 @@ class DataToNeo4j(object):
             for relation in relation_ship:
                 # print("relation is: {0}".foramat(relation))
                 if ROOT:
-                    node_start = self.graph.nodes.match(*self.node_label, NodeClass=attr).first()
+                    node_start = self.graph.nodes.match(*self.node_label, attribute=attr).first()
                 else:
                     node_start = self.graph.nodes.match(*self.node_label, id=index).first()
                 for id in relation:
@@ -48,9 +52,9 @@ class DataToNeo4j(object):
     def create_file_method_relationship(self, file_root, method_root, edge_type="hasMethod"):
         '''建立文件ROOT与其所有函数ROOT间的边'''
         try:
-            node_start = self.graph.nodes.match(*self.node_label, NodeClass=file_root).first()
+            node_start = self.graph.nodes.match(*self.node_label, attribute=file_root).first()
             for method in method_root:
-                node_end = self.graph.nodes.match(*self.node_label, NodeClass=method).first()
+                node_end = self.graph.nodes.match(*self.node_label, attribute=method).first()
 
                 edge = Relationship(node_start, edge_type, node_end)
                 self.graph.create(edge)
@@ -66,12 +70,18 @@ class DataToNeo4j(object):
             try:
                 node_start = self.graph.nodes.match(*start_label, id=start_node_index).first()
 
-                for end_file_name, end_method_name in _[1].items():
-                    end_label = [Version, end_file_name, end_file_name + "-" + end_method_name]
+                # 如果文件名中包含 - 字符，这里会出错
+                end_label = [Version, _[1].split("-")[0], _[1]]
+                node_end = self.graph.nodes.match(*end_label, attribute=_[1].split("-", 1)[1] + "-ROOT").first()
+                edge = Relationship(node_start, edge_type, node_end)
+                self.graph.create(edge)
 
-                    node_end = self.graph.nodes.match(*end_label, NodeClass=end_method_name + "-ROOT").first()
-                    edge = Relationship(node_start, edge_type, node_end)
-                    self.graph.create(edge)
+                # for end_file_name, end_method_name in _[1].items():
+                #     end_label = [Version, end_file_name, end_file_name + "-" + end_method_name]
+
+                #     node_end = self.graph.nodes.match(*end_label, NodeClass=end_method_name + "-ROOT").first()
+                #     edge = Relationship(node_start, edge_type, node_end)
+                #     self.graph.create(edge)
             except AttributeError as e:
                 print(e)
 
@@ -100,7 +110,7 @@ class DataToNeo4j(object):
                 for rel in rels:
                     start, end = rel.nodes
                     # 此处后面添加，对节点的判断（如到函数根节点时停，节点属性进行判断操作）
-                    if start not in node_passed and start.get("NodeClass")[-9:] != "java-ROOT":
+                    if start not in node_passed and start.get("attribute")[-9:] != "java-ROOT":
                         after.append(start)
                         node_passed.append(start)
                     if end not in node_passed:
