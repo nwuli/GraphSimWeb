@@ -63,10 +63,13 @@ def getpairFile1(basefileList, targetfileList):
     if basefileLength > targetfileLength:
         for base in basefileList:
             base_split = base.split("\\")
-            base_name = base_split[len(base_split) - 1]
+            # 这里的使用函数名匹配存在问题，一般而言，项目的位置不会发生变化，因此我们可以把项目的路径加上
+            # 'H:\\GraphSimWeb\\jsondata\\s0.9.23\\android-demo\\src\\androidTest\\java\\com\\example\\myapplication\\ExampleInstrumentedTest.java.txt'
+            # TODO 取 s0.9.23后面的内容进行比较
+            base_name = base_split[4:len(base_split)]
             for target in targetfileList:
                 target_split = target.split("\\")
-                target_name = target_split[len(target_split) - 1]
+                target_name = target_split[4:len(target_split)]
                 # TODO 这个不影响，我们函数名增加了更多的字段信息，但是还是字符串比较
                 if base_name == target_name:
                     flag = 1
@@ -80,10 +83,12 @@ def getpairFile1(basefileList, targetfileList):
     else:
         for base in targetfileList:
             base_split = base.split("\\")
-            base_name = base_split[len(base_split) - 1]
+            base_name = base_split[4:len(base_split)]
+            # TODO 这个函数对的匹配有点问题
             for target in basefileList:
                 target_split = target.split("\\")
-                target_name = target_split[len(target_split) - 1]
+                # TODO 比较对象
+                target_name = target_split[4:len(target_split)]
                 if base_name == target_name:
                     flag = 1
                     break
@@ -106,19 +111,20 @@ def getpairMethodGraph(basefileList, targetfileList):
         target = paifile[1]
         # 需要判断路径是否存在（可能存在空文件对）
         if base != "" and target != "":
-            # 文件名字
-            filename = paifile[0]
+            # 默认以当前版本的文件名字作为我们额文件名字
+            filename = paifile[1]
             # ====================
             baseMethodGraph = ParseFile(base)
             targetMethodGraph = ParseFile(target)
             # 得到当前base和target文件的函数数目
             baseMethodGraphList = baseMethodGraph.getMethodGraph()
             targetMethodGraphList = targetMethodGraph.getMethodGraph()
-            # 两个文件的函数数目一样的时候
+            # 两个文件的函数数目一样的时候(可能函数数目都为0)
             if len(baseMethodGraphList) == len(targetMethodGraphList):
 
                 if (len(baseMethodGraphList) == 0):
                     filename = paifile[1]
+                    # TODO 不存在函数这部分是接口类
                     pairMethod[filename] = {"change": "nomethod"}
                     continue
                 tempdic = {}
@@ -138,7 +144,9 @@ def getpairMethodGraph(basefileList, targetfileList):
 
                     pairMethod[filename] = tempdic
                 else:
+                    # 存在对应的文件，但是没有函数对匹配，因此都需要进行扫描。
                     pairMethod[filename] = {"change": "nomatch"}
+
             # 两个文件存在文件对，但是函数的数量不相同，工程扫描应该是以文件为单位，函数变化分布，可以作为文件扫描程度的依据
             else:
 
@@ -300,15 +308,26 @@ def getMethodSim(pairMethodGraph):
     for filekey in pairMethodGraph.keys():
         _sim = {}
         file = pairMethodGraph[filekey]
-        # 文件数目不一致，不需要对文件中的函数进行处理
+        # 不存在文件对的情况
         keytype = [key for key in file.keys()]
         if keytype[0] == "change":
             if file["change"] == "nomethod":
-                sim[filekey] = {"sim":"1.0"}
+                # 接口，无函数匹配
+                sim[filekey] = {"sim": "1.0"}
+            elif file["change"] == "nomatch":
+                # 没有函数匹配，均需要扫描
+                sim[filekey] = {"sim": "0.0"}
+            elif file["change"] == "addfile":
+                # 增加函数、或者文件
+                sim[filekey] = {"sim": "2.0"}
             else:
-                sim[filekey] = {"sim":"0.0"}
+                # 删除文件或者函数
+                sim[filekey] = {"sim": "-1.0"}
+
 
         else:
+            # 存在文件对的情况
+
             for keytupe in file.keys():
                 # keytupe:(good_1.0，good_1.1函数对)
                 keytupe = tuple(keytupe)
@@ -347,6 +366,22 @@ def extractFile(Root, fileList):
         else:
             fileList = extractFile(os.path.join(Root, item), fileList)
     return fileList
+
+
+def toText(dic, url, name):
+    """
+
+    :param content: 写入的内容
+    :param url:  保存的路径
+    :param name: 函数的名字
+    """
+    # 在给定的路径下写入文件
+    mode = ""
+    path = os.path.join(url, name)
+    with open(path, mode="w") as file:
+        for type in dic.keys():
+            for line in dic[type]:
+                file.write(type + "&\t" + line + "\n")
 
 
 if __name__ == '__main__':
