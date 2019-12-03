@@ -20,7 +20,7 @@ class CallGraph:
                 pjson = json.loads(header)
                 # 文件的相关信息
                 fileName = pjson["fileName"]
-                Version = pjson["Version"]
+                Version = pjson["version"]
                 # 后面的为文件下面所有的函数
                 methodbody = lines[1:]
                 G = self.addNode(G, fileName, Version, methodbody)
@@ -31,7 +31,7 @@ class CallGraph:
         # 文件节点的属性还没有添加
         for method in methodbody:
             methodjson = json.loads(method)
-            methodNodeName = methodjson["MethodName"]
+            methodNodeName = methodjson["methodName"]
             connection = {"connecting": "include"}
             # fileNode->methodNode :relation:include
             G.add_edge(fileNodeName, methodNodeName,**{"connecting": "include"})
@@ -39,9 +39,9 @@ class CallGraph:
                 # TODO 添加函数中某一结点调用外部函数的结点
                 callMethodNameReferToDic = methodjson["callMethodNameReferTo"]
                 for nodeindex in callMethodNameReferToDic.keys():
-                    methodNodeName = methodjson["MethodName"]
+                    methodNodeName =methodjson["fileName"]+"-"+ methodjson["methodName"]
                     # TODO 被调用函数结点的名字，可能存在逻辑bug
-                    calledMethodNodeName =[functionname for functionname in callMethodNameReferToDic[nodeindex].values()][0]
+                    calledMethodNodeName =callMethodNameReferToDic[nodeindex]
                     connection = {"connecting": "call"}
                     G.add_edge(methodNodeName, calledMethodNodeName, **{"connecting": "call"})
         return G
@@ -49,7 +49,7 @@ class CallGraph:
 
 if __name__ == '__main__':
     # 测试函数的功能
-    low_version = "H:\GraphSimWeb\jsondata\sV1.0"
+    low_version = "H:\GraphSimWeb\jsondata\s0.9.22"
     high_version = "H:\GraphSimWeb\jsondata\sV1.1"
     base_file_list = []
     target_file_list = []

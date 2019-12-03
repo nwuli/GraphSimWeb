@@ -4,8 +4,6 @@ from ParseFile import *
 import pandas as pd
 import numpy as np
 import networkx as nx
-from collections import Iterable
-import matplotlib.pyplot as plt
 from grakel import Graph
 from grakel import GraphKernel
 
@@ -44,7 +42,6 @@ def getpairFile(basefileList, targetfileList):
     if len(basefileList) > len(targetfileList):
         pass
 
-
     else:
         pass
     # 添加文件
@@ -58,47 +55,49 @@ def getpairFile1(basefileList, targetfileList):
     # TODO 2019/10/29 待完成任务
     diff = []
     flag = 0
-    basefileLength = len(basefileList)
-    targetfileLength = len(targetfileList)
-    if basefileLength > targetfileLength:
-        for base in basefileList:
-            base_split = base.split("\\")
-            # 这里的使用函数名匹配存在问题，一般而言，项目的位置不会发生变化，因此我们可以把项目的路径加上
-            # 'H:\\GraphSimWeb\\jsondata\\s0.9.23\\android-demo\\src\\androidTest\\java\\com\\example\\myapplication\\ExampleInstrumentedTest.java.txt'
-            # TODO 取 s0.9.23后面的内容进行比较
-            base_name = base_split[4:len(base_split)]
-            for target in targetfileList:
-                target_split = target.split("\\")
-                target_name = target_split[4:len(target_split)]
-                # TODO 这个不影响，我们函数名增加了更多的字段信息，但是还是字符串比较
-                if base_name == target_name:
-                    flag = 1
-                    break
-            if flag == 0:
-                pair = [base, ""]
-                diff.append(pair)
-            else:
-                diff.append([base, target])
-                flag = 0
-    else:
-        for base in targetfileList:
-            base_split = base.split("\\")
-            base_name = base_split[4:len(base_split)]
-            # TODO 这个函数对的匹配有点问题
-            for target in basefileList:
-                target_split = target.split("\\")
-                # TODO 比较对象
-                target_name = target_split[4:len(target_split)]
-                if base_name == target_name:
-                    flag = 1
-                    break
-            if flag == 0:
-                pair = ["", base]
-                diff.append(pair)
-            else:
-                diff.append([target, base])
-                flag = 0
-    return diff
+    # 2019/11/14 修复函数对的匹配问题
+    # 两次便利
+    for base in basefileList:
+        base_split = base.split("\\")
+        # 这里的使用函数名匹配存在问题，一般而言，项目的位置不会发生变化，因此我们可以把项目的路径加上
+        # 'H:\\GraphSimWeb\\jsondata\\s0.9.23\\android-demo\\src\\androidTest\\java\\com\\example\\myapplication\\ExampleInstrumentedTest.java.txt'
+        # TODO 取 s0.9.23后面的内容进行比较
+        base_name = base_split[4:len(base_split)]
+        for target in targetfileList:
+            target_split = target.split("\\")
+            target_name = target_split[4:len(target_split)]
+            # TODO 这个不影响，我们函数名增加了更多的字段信息，但是还是字符串比较
+            if base_name == target_name:
+                flag = 1
+                break
+        if flag == 0:
+            pair = (base, "")
+            diff.append(pair)
+        else:
+            diff.append((base, target))
+            flag = 0
+    for base in targetfileList:
+        base_split = base.split("\\")
+        base_name = base_split[4:len(base_split)]
+        # TODO 这个函数对的匹配有点问题
+        for target in basefileList:
+            target_split = target.split("\\")
+            # TODO 比较对象
+            target_name = target_split[4:len(target_split)]
+            if base_name == target_name:
+                # 找到函数匹配对
+                flag = 1
+                break
+        if flag == 0:
+            pair = ("", base)
+            diff.append(pair)
+        else:
+            diff.append((target, base))
+            flag = 0
+
+    # 两次便利肯定存在相同元素，集合去除相同的元素。
+    diffset = list(set(diff))
+    return diffset
 
 
 def getpairMethodGraph(basefileList, targetfileList):
@@ -131,8 +130,8 @@ def getpairMethodGraph(basefileList, targetfileList):
                 for B, T in itertools.product(baseMethodGraphList, targetMethodGraphList):
                     # 为对应的函数名
                     if B[0] == T[0]:
-                        filename1 = B[0] + "_" + baseMethodGraph.getVersion()
-                        filename2 = B[0] + "_" + targetMethodGraph.getVersion()
+                        filename1 = B[0] + "&" + baseMethodGraph.getVersion()
+                        filename2 = B[0] + "&" + targetMethodGraph.getVersion()
                         Bgraph = B[2]
 
                         Tgraph = T[2]
@@ -178,10 +177,10 @@ def diffMethodNum(baseMethodGraphList, targetMethodGraphList, baseMethodGraph, t
     flag = 0
     if len(baseMethodGraphList) > len(targetMethodGraphList):
         for B in baseMethodGraphList:
-            filename1 = B[0] + "_" + baseMethodGraph.getVersion()
+            filename1 = B[0] + "&" + baseMethodGraph.getVersion()
             for T in targetMethodGraphList:
                 if B[0] == T[0]:
-                    filename2 = T[0] + "_" + targetMethodGraph.getVersion()
+                    filename2 = T[0] + "&" + targetMethodGraph.getVersion()
                     Bgraph = B[2]
 
                     Tgraph = T[2]
@@ -203,10 +202,10 @@ def diffMethodNum(baseMethodGraphList, targetMethodGraphList, baseMethodGraph, t
 
     else:
         for B in targetMethodGraphList:
-            filename1 = B[0] + "_" + targetMethodGraph.getVersion()
+            filename1 = B[0] + "&" + targetMethodGraph.getVersion()
             for T in baseMethodGraphList:
                 if B[0] == T[0]:
-                    filename2 = T[0] + "_" + baseMethodGraph.getVersion()
+                    filename2 = T[0] + "&" + baseMethodGraph.getVersion()
                     Bgraph = B[2]
 
                     Tgraph = T[2]
@@ -381,7 +380,7 @@ def toText(dic, url, name):
     with open(path, mode="w") as file:
         for type in dic.keys():
             for line in dic[type]:
-                file.write(type + "&\t" + line + "\n")
+                file.write(type + "&" + line + "\n")
 
 
 if __name__ == '__main__':

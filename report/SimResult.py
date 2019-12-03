@@ -1,6 +1,7 @@
 import numpy as np
 from Utils import *
 from Graph import *
+from report.CallGraph import CallGraph
 
 
 class SimResult:
@@ -31,15 +32,19 @@ class SimResult:
                 for methodDictkey in self.sim[file].keys():
                     # 人为标记"sim"字段
                     if methodDictkey == 'sim':
+                        # TODO 这部分数据可能有问题
+                        basefile = "H:\GraphSimWeb\jsondata\s0.9.22"
+                        pfile = file.replace(".txt", "")
+                        filename = pfile[len(basefile):len(pfile)]
                         if dic["sim"] == '0.0':
                             # 无匹配,函数均发生变化
-                            self.nomatch.append(file.replace(".txt", ""))
+                            self.nomatch.append(filename)
                         elif dic["sim"] == "-1.0":
                             # sim="-1.0"删除
-                            self.deletediff.append(file.replace(".txt", ""))
+                            self.deletediff.append(filename)
                         elif dic["sim"] == "2.0":
                             # 增加文件
-                            self.adddiff.append(file.replace(".txt", ""))
+                            self.adddiff.append(filename)
                         else:
                             # 接口文件，没有函数，不需要扫描
                             pass
@@ -63,13 +68,15 @@ class SimResult:
         candiate_filename1 = methodDictkey[0]
         candiate_filename2 = methodDictkey[1]
         methodTupeValue = dic[methodDictkey]
-
+        basefile = "H:\GraphSimWeb\jsondata\s0.9.22"
+        pfile = file.replace(".txt", "")
+        filename = pfile[len(basefile):len(pfile)]
         # 只要元组键值缺少元素，则认为是函数发生了增删操作
         if methodTupeKey[0] == '' or methodTupeKey[1] == '':
             if methodTupeKey[0] == '':
-                self.adddiff.append(file.replace(".txt", "") + "&" + methodTupeKey[1])
+                self.adddiff.append(filename + "&" + methodTupeKey[1])
             else:
-                self.deletediff.append(file.replace(".txt", "") + "&" + methodTupeKey[0])
+                self.deletediff.append(filename + "&" + methodTupeKey[0])
         # 只是函数的内容发生了变化
         else:
             s = methodTupeValue[0][0]
@@ -78,10 +85,27 @@ class SimResult:
                 print("相似函数:{name}".format(name=methodTupeKey[1]))
             else:
                 # 发生了变化，需要根据程度进行判断，分析相关的部分
+                # TODO 这个需要把前面的路径去掉。
+                basefile = "H:\GraphSimWeb\jsondata\s0.9.22"
+                pfile = file.replace(".txt", "")
+                filename = pfile[len(basefile):len(pfile)]
+                #############################################
                 print("发生变化函数：{name}".format(name=file.replace(".txt", "") + "&" + candiate_filename2))
-                self.normaldiff.append(file.replace(".txt", "") + "&" + candiate_filename2)
+                self.normaldiff.append(filename + "&" + candiate_filename2)
                 # 关联分析得到的函数变化
-                self.Node2NodeConnect(file, methodTupeKey[1])  # file:url
+                self.Node2NodeConnect(file, methodTupeKey[1])
+
+    def connectionParesing(self, diff, level):
+        """
+        通过自定义层次分析上下文。
+        分析代码的相关和不相关的地方：
+        1、normaldiff
+        2、connectdiff
+        3、deletediff
+        4、adddiff
+        5、nomatch
+        通过函数调用图分析
+        """
 
     def Node2NodeConnect(self, fieUrl, diffmethodName):
         # TODO 新函数的函数调用和旧函数的函数的调用的callreferto信息均需要参考
@@ -91,7 +115,7 @@ class SimResult:
             for methodLine in methodLines:
                 method = json.loads(methodLine)
                 # 该文件下:函数名+版本号
-                methodName = method["methodName"] + "_" + method["version"]
+                methodName = method["methodName"] + "&" + method["version"]
                 if methodName == diffmethodName:
                     # 找到变化的函数
                     callMethodNameReferT = method["callMethodNameReferTo"]
@@ -113,9 +137,19 @@ if __name__ == '__main__':
     SIm = getMethodSim(PairMethodGraph)
     sim = SimResult(SIm)
     normaldiff, connectdiff, deletediff, adddiff, nomatch = sim.PareFileResult()
+    # 得到函数的调用图
+    # callgraph = CallGraph(target_file_list).file2CallGraph()
+    # temp=[]
+    # for diff in normaldiff:
+    #     diff=diff.replace("&","-")
+    #     nodediff=diff[len(low_version)+1:len(diff)]
+    #
+    #     temp=nx.neighbors(callgraph,nodediff)
+    #     print("测试")
+
     dic = {};
     dic["normaldiff"] = normaldiff
-    dic["connectdiff"] = connectdiff
+    # dic["connectdiff"] = connectdiff
     dic["deletediff"] = deletediff
     dic["adddiff"] = adddiff
     dic["nomatch"] = nomatch
